@@ -1,0 +1,53 @@
+{
+  "type": "network",
+  "version": "1.0",
+  "data": "data.json",
+  "logo": {
+    "file": "",
+    "link": "",
+    "text": "Jenske Sampson"
+  },
+  "text": {
+    "more": "",
+    "intro": "This is a visualisation of the network of Guido Gezelle. \nThe graph shows people who are correspondents of Guido Gezelle \nand of whom Guido Gezelle is the correspondent.\n It also shows interconnections between correspondens such as who corresponded with eachother\nand who is family of eachother",
+    "title": "Correspondents of Guido Gezelle"
+  },
+  "legend": {
+    "edgeLabel": "Relationship",
+    "colorLabel": "Zie Group Selector",
+    "nodeLabel": "Person"
+  },
+  "features": {
+    "search": true,
+    "groupSelectorAttribute": "place of birth",
+    "hoverBehavior": "dim"
+  },
+  "informationPanel": {
+    "groupByEdgeDirection": true,
+    "imageAttribute": "Id"
+  },
+  "sigma": {
+    "drawingProperties": {
+      "defaultEdgeType": "curve",
+      "defaultHoverLabelBGColor": "#002147",
+      "defaultLabelBGColor": "#ddd",
+      "activeFontStyle": "bold",
+      "defaultLabelColor": "#000",
+      "labelThreshold": 10,
+      "defaultLabelHoverColor": "#fff",
+      "fontStyle": "bold",
+      "hoverFontStyle": "bold",
+      "defaultLabelSize": 14
+    },
+    "graphProperties": {
+      "maxEdgeSize": 0.5,
+      "minEdgeSize": 0.2,
+      "minNodeSize": 1,
+      "maxNodeSize": 7
+    },
+    "mouseProperties": {
+      "maxRatio": 20,
+      "minRatio": 0.75
+    }
+  }
+}
