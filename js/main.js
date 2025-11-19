@@ -3,9 +3,8 @@ var sigInst, canvas, $GP
 //Load configuration file
 var config={};
 
-//For debug allow a config=file.json parameter to specify the config
 function GetQueryStringParams(sParam,defaultVal) {
-    var sPageURL = ""+window.location;//.search.substring(1);//This might be causing error in Safari?
+    var sPageURL = ""+window.location;
     if (sPageURL.indexOf("?")==-1) return defaultVal;
     sPageURL=sPageURL.substr(sPageURL.indexOf("?")+1);    
     var sURLVariables = sPageURL.split('&');
@@ -18,22 +17,16 @@ function GetQueryStringParams(sParam,defaultVal) {
     return defaultVal;
 }
 
-
 jQuery.getJSON(GetQueryStringParams("config","config.json"), function(data, textStatus, jqXHR) {
 	config=data;
 	
 	if (config.type!="network") {
-		//bad config
 		alert("Invalid configuration settings.")
 		return;
 	}
 	
-	//As soon as page is ready (and data ready) set up it
 	$(document).ready(setupGUI(config));
-});//End JSON Config load
-
-
-// FUNCTION DECLARATIONS
+});
 
 Object.size = function(obj) {
     var size = 0, key;
@@ -90,17 +83,21 @@ function initSigma(config) {
 
     dataReady = function() {//This is called as soon as data is loaded
 		a.clusters = {};
+        a.clusterLabels = {}; // NEW: Object to store the label (e.g. "Male") for each color group
 
 		a.iterNodes(
-			function (b) { //This is where we populate the array used for the group select box
-
-				// note: index may not be consistent for all nodes. Should calculate each time. 
-				 // alert(JSON.stringify(b.attr.attributes[5].val));
-				// alert(b.x);
+			function (b) { 
 				a.clusters[b.color] || (a.clusters[b.color] = []);
-				a.clusters[b.color].push(b.id);//SAH: push id not label
+				a.clusters[b.color].push(b.id);
+                
+                // NEW: Capture the group label based on the config attribute (Gender)
+                if (config.features.groupSelectorAttribute) {
+                    var attrValue = b.attr.attributes[config.features.groupSelectorAttribute];
+                    if (attrValue) {
+                        a.clusterLabels[b.color] = attrValue;
+                    }
+                }
 			}
-		
 		);
 	
 		a.bind("upnodes", function (a) {
@@ -120,10 +117,8 @@ function initSigma(config) {
 
 
 function setupGUI(config) {
-	// Initialise main interface elements
-	var logo=""; // Logo elements
+	var logo=""; 
 	if (config.logo.file) {
-
 		logo = "<img src=\"" + config.logo.file +"\"";
 		if (config.logo.text) logo+=" alt=\"" + config.logo.text + "\"";
 		logo+=">";
@@ -133,41 +128,29 @@ function setupGUI(config) {
 	if (config.logo.link) logo="<a href=\"" + config.logo.link + "\">"+logo+"</a>";
 	$("#maintitle").html(logo);
 
-	// #title
 	$("#title").html("<h2>"+config.text.title+"</h2>");
 
-	// #titletext
 	$("#titletext").html(config.text.intro);
 
-	// More information
 	if (config.text.more) {
 		$("#information").html(config.text.more);
 	} else {
-		//hide more information link
 		$("#moreinformation").hide();
 	}
 
-	// Legend
-
-	// Node
 	if (config.legend.nodeLabel) {
 		$(".node").next().html(config.legend.nodeLabel);
 	} else {
-		//hide more information link
 		$(".node").hide();
 	}
-	// Edge
 	if (config.legend.edgeLabel) {
 		$(".edge").next().html(config.legend.edgeLabel);
 	} else {
-		//hide more information link
 		$(".edge").hide();
 	}
-	// Colours
 	if (config.legend.nodeLabel) {
 		$(".colours").next().html(config.legend.colorLabel);
 	} else {
-		//hide more information link
 		$(".colours").hide();
 	}
 
@@ -206,7 +189,6 @@ function configSigmaElements(config) {
     
     // Node hover behaviour
     if (config.features.hoverBehavior == "dim") {
-
 		var greyColor = '#ccc';
 		sigInst.bind('overnodes',function(event){
 		var nodes = event.content;
@@ -275,16 +257,22 @@ function configSigmaElements(config) {
     }
     $GP.bg = $(sigInst._core.domElements.bg);
     $GP.bg2 = $(sigInst._core.domElements.bg2);
-    var a = [],
-        b,x=1;
-		for (b in sigInst.clusters) a.push('<div style="line-height:12px"><a href="#' + b + '"><div style="width:40px;height:12px;border:1px solid #fff;background:' + b + ';display:inline-block"></div> Group ' + (x++) + ' (' + sigInst.clusters[b].length + ' members)</a></div>');
-    //a.sort();
+    
+    // UPDATED: Group Selector Display Logic
+    var a = [], b, x=1;
+    for (b in sigInst.clusters) {
+        // Get the label we stored in dataReady, or fallback to "Group X"
+        var groupLabel = (sigInst.clusterLabels && sigInst.clusterLabels[b]) ? sigInst.clusterLabels[b] : 'Group ' + (x++);
+        
+        a.push('<div style="line-height:12px"><a href="#' + b + '"><div style="width:40px;height:12px;border:1px solid #fff;background:' + b + ';display:inline-block"></div> ' + groupLabel + ' (' + sigInst.clusters[b].length + ' members)</a></div>');
+    }
+    
     $GP.cluster.content(a.join(""));
     b = {
         minWidth: 400,
         maxWidth: 800,
         maxHeight: 600
-    };//        minHeight: 300,
+    };
     $("a.fb").fancybox(b);
     $("#zoom").find("div.z").each(function () {
         var a = $(this),
@@ -504,28 +492,14 @@ function nodeActive(a) {
     d = "";
 		for (g in e) {
 			c = e[g];
-			/*if (c.group != d) {
-				d = c.group;
-				f.push('<li class="cf" rel="' + c.color + '"><div class=""></div><div class="">' + d + "</div></li>");
-			}*/
 			f.push('<li class="membership"><a href="#' + c.name + '" onmouseover="sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex[\'' + c.id + '\'])\" onclick=\"nodeActive(\'' + c.id + '\')" onmouseout="sigInst.refresh()">' + c.name + "</a></li>");
 		}
 		return f;
 	}
-	
-	/*console.log("mutual:");
-	console.log(mutual);
-	console.log("incoming:");
-	console.log(incoming);
-	console.log("outgoing:");
-	console.log(outgoing);*/
-	
+
 	
 	var f=[];
 	
-	//console.log("neighbors:");
-	//console.log(sigInst.neighbors);
-
 	if (groupByDirection) {
 		size=Object.size(mutual);
 		f.push("<h2>Mututal (" + size + ")</h2>");
@@ -539,7 +513,7 @@ function nodeActive(a) {
 	} else {
 		f=f.concat(createList(sigInst.neighbors));
 	}
-	//b is object of active node -- SAH
+
     b.hidden = !1;
     b.attr.color = b.color;
     b.attr.lineWidth = 6;
@@ -552,32 +526,41 @@ function nodeActive(a) {
             b = a.attr("rel");
     });
     f = b.attr;
+    
+    // UPDATED: Specific Information Panel Display
     if (f.attributes) {
   		var image_attribute = false;
   		if (config.informationPanel.imageAttribute) {
   			image_attribute=config.informationPanel.imageAttribute;
   		}
         e = [];
-        temp_array = [];
-        g = 0;
-        for (var attr in f.attributes) {
-            var d = f.attributes[attr],
-                h = "";
-			if (attr!=image_attribute) {
-                h = '<span><strong>' + attr + ':</strong> ' + d + '</span><br/>'
-			}
-            //temp_array.push(f.attributes[g].attr);
-            e.push(h)
+        
+        // Manually define the order of attributes to show
+        // Note: "year of birth" is missing in your data.json file so it will show as undefined or blank
+        var attributesToShow = [
+            { key: 'type', label: 'Type' },
+            { key: 'gender', label: 'Gender' },
+            { key: 'year of birth', label: 'Year of Birth' },
+            { key: 'place of birth', label: 'Place of Birth' },
+            { key: 'image link', label: 'Image link' }
+        ];
+
+        for (var i = 0; i < attributesToShow.length; i++) {
+            var key = attributesToShow[i].key;
+            var label = attributesToShow[i].label;
+            // check if attribute exists in the node data
+            if (f.attributes[key]) {
+                e.push('<span><strong>' + label + ':</strong> ' + f.attributes[key] + '</span><br/>');
+            }
         }
 
-        if (image_attribute) {
-        	//image_index = jQuery.inArray(image_attribute, temp_array);
+        if (image_attribute && f.attributes[image_attribute]) {
         	$GP.info_name.html("<div><img src=" + f.attributes[image_attribute] + " style=\"vertical-align:middle\" /> <span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
         } else {
         	$GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
         }
         // Image field for attribute pane
-        $GP.info_data.html(e.join("<br/>"))
+        $GP.info_data.html(e.join(""))
     }
     $GP.info_data.show();
     $GP.info_p.html("Connections:");
@@ -608,7 +591,10 @@ function showCluster(a) {
         }
         sigInst.clusters[a] = e;
         sigInst.draw(2, 2, 2, 2);
-        $GP.info_name.html("<b>" + a + "</b>");
+        // UPDATED: Use the friendly group name if available
+        var groupLabel = (sigInst.clusterLabels && sigInst.clusterLabels[a]) ? sigInst.clusterLabels[a] : a;
+        
+        $GP.info_name.html("<b>" + groupLabel + "</b>");
         $GP.info_data.hide();
         $GP.info_p.html("Group Members:");
         $GP.info_link.find("ul").html(f.join(""));
@@ -619,5 +605,3 @@ function showCluster(a) {
     }
     return !1
 }
-
-
